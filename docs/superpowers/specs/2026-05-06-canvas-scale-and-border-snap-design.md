@@ -41,7 +41,7 @@ DraggableContainer (provide scale, containerSize)
 **Data Flow**:
 1. Parent component passes `:scale="0.8"` prop to DraggableContainer
 2. DraggableContainer validates scale range (0.5-2.0), provides to children
-3. DraggableContainer applies CSS `transform: scale(scale)` to root element
+3. User applies CSS `transform: scale()` in parent element (visual presentation)
 4. Vue3DraggableResizable injects scale
 5. hooks.ts resize logic calculates dynamic snap distance: `baseThreshold / scale`
 
@@ -65,10 +65,7 @@ scale: {
 provide('scale', toRef(props, 'scale'))
 ```
 
-**Style Handling**:
-- Apply inline style to root element: `transform: scale(scale)`
-- Set `transform-origin: top left` for consistent scaling
-- Add `transition` property for smooth scaling (configurable via default)
+**Note**: DraggableContainer does NOT apply CSS transform. Visual scaling is handled by the user in the parent element.
 
 ### Vue3DraggableResizable Modifications
 
@@ -132,13 +129,13 @@ Snap logic only activates when resizing towards right or bottom directions (hand
 ### Example 1: User Sets Scale to 0.5
 
 ```
-1. Parent component passes :scale="0.5"
+1. Parent component passes :scale="0.5" to DraggableContainer
    ↓
 2. DraggableContainer receives and validates scale
    ↓
 3. DraggableContainer.provide('scale', ref(0.5))
    ↓
-4. DraggableContainer applies style { transform: 'scale(0.5)' }
+4. User applies CSS transform: scale(0.5) in parent element (visual)
    ↓
 5. Vue3DraggableResizable.inject('scale') → ref(0.5)
    ↓
@@ -146,7 +143,7 @@ Snap logic only activates when resizing towards right or bottom directions (hand
    ↓
 7. Calculates dynamic snap threshold: 10 / 0.5 = 20px
    ↓
-8. Component visually shrinks by 50%, logical coordinates unchanged
+8. Component visually shrinks by 50% (via user's CSS), logical coordinates unchanged
 ```
 
 ### Example 2: User Resizes Component Near Boundary
@@ -302,16 +299,19 @@ All changes are **100% backward compatible**:
 
 ```vue
 <template>
-  <DraggableContainer :scale="0.8">
-    <Vue3DraggableResizable
-      v-model:x="x"
-      v-model:y="y"
-      v-model:w="w"
-      v-model:h="h"
-    >
-      Content
-    </Vue3DraggableResizable>
-  </DraggableContainer>
+  <!-- User applies visual scaling in parent element -->
+  <div :style="{ transform: `scale(${scale})`, transformOrigin: 'top left' }">
+    <DraggableContainer :scale="0.8">
+      <Vue3DraggableResizable
+        v-model:x="x"
+        v-model:y="y"
+        v-model:w="w"
+        v-model:h="h"
+      >
+        Content
+      </Vue3DraggableResizable>
+    </DraggableContainer>
+  </div>
 </template>
 
 <script>
@@ -354,17 +354,20 @@ export default {
     <button @click="scale = 1.0">100%</button>
     <button @click="scale = 1.5">150%</button>
 
-    <DraggableContainer :scale="scale">
-      <Vue3DraggableResizable
-        v-model:x="x"
-        v-model:y="y"
-        v-model:w="w"
-        v-model:h="h"
-        :snapToBorder="true"
-      >
-        Drag me and resize to see snap in action!
-      </Vue3DraggableResizable>
-    </DraggableContainer>
+    <!-- Visual scaling applied here -->
+    <div :style="{ transform: `scale(${scale})`, transformOrigin: 'top left' }">
+      <DraggableContainer :scale="scale">
+        <Vue3DraggableResizable
+          v-model:x="x"
+          v-model:y="y"
+          v-model:w="w"
+          v-model:h="h"
+          :snapToBorder="true"
+        >
+          Drag me and resize to see snap in action!
+        </Vue3DraggableResizable>
+      </DraggableContainer>
+    </div>
   </div>
 </template>
 ```
