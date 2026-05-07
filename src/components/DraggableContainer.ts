@@ -35,6 +35,13 @@ export default defineComponent({
     referenceLineColor: {
       type: String,
       default: '#f00'
+    },
+    scale: {
+      type: Number,
+      default: 1.0,
+      validator: (value: number) => {
+        return value >= 0.5 && value <= 2.0
+      }
     }
   },
   setup(props) {
@@ -73,6 +80,7 @@ export default defineComponent({
     provide('adsorbParent', toRef(props, 'adsorbParent'))
     provide('adsorbCols', props.adsorbCols || [])
     provide('adsorbRows', props.adsorbRows || [])
+    provide('scale', toRef(props, 'scale'))
     return {
       matchedRows,
       matchedCols
