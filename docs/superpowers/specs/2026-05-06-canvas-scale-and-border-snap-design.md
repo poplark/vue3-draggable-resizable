@@ -1,55 +1,55 @@
-# Canvas Scale and Border Snap Design
+# 画布缩放和边界吸附设计文档
 
-**Date**: 2026-05-06
-**Status**: Approved
-**Author**: Claude with user collaboration
+**日期**: 2026-05-06
+**状态**: 已批准
+**作者**: Claude 与用户协作
 
-## Overview
+## 概述
 
-This document describes the design for two new features to be added to the vue3-draggable-resizable component library:
+本文档描述了要添加到 vue3-draggable-resizable 组件库的两个新功能的设计：
 
-1. **Canvas Scale Feature**: Allow users to scale the entire DraggableContainer and all its child components (50%-200%)
-2. **Smart Border Snap Feature**: Automatically snap component edges to container boundaries when resizing, with intelligent threshold based on scale
+1. **画布缩放功能**：允许用户缩放整个 DraggableContainer 及其所有子组件（50%-200%）
+2. **智能边界吸附功能**：在调整组件大小时自动吸附到容器边界，基于缩放比例的智能阈值
 
-## Requirements
+## 需求
 
-### Canvas Scale Feature
-- Support canvas zoom in/out (50% - 200%)
-- Provide API interface via props
-- Maintain dragging and alignment functionality during scaling
-- Use CSS transform for visual scaling (logical coordinates remain unchanged)
+### 画布缩放功能
+- 支持画布放大/缩小（50% - 200%）
+- 通过 props 提供 API 接口
+- 缩放时保持拖拽和对齐功能正常
+- 使用 CSS transform 进行视觉缩放（逻辑坐标保持不变）
 
-### Border Snap Feature
-- Auto-snap to container boundaries when resizing components
-- Control via props (snapToBorder)
-- Intelligent snap threshold that adjusts based on scale
-- Only snap to right and bottom boundaries
+### 边界吸附功能
+- 调整组件大小时自动吸附到容器边界
+- 通过 props 控制（snapToBorder）
+- 根据缩放比例调整的智能吸附阈值
+- 只吸附到右边界和下边界
 
-## Architecture
+## 架构
 
-### Design Approach: Centralized Scale Management
+### 设计方案：集中式缩放管理
 
-We use a centralized approach where `DraggableContainer` manages the scale state and provides it to all child components via Vue's `provide/inject` mechanism.
+我们使用集中式方法，`DraggableContainer` 管理缩放状态，并通过 Vue 的 `provide/inject` 机制将其提供给所有子组件。
 
-**Component Relationship**:
+**组件关系**：
 ```
-DraggableContainer (provide scale, containerSize)
-  └── Vue3DraggableResizable (inject scale, containerSize)
-       └── hooks.ts (initResizeHandle uses scale for smart snap threshold)
+DraggableContainer (提供 scale, containerSize)
+  └── Vue3DraggableResizable (注入 scale, containerSize)
+       └── hooks.ts (initResizeHandle 使用 scale 计算智能吸附阈值)
 ```
 
-**Data Flow**:
-1. Parent component passes `:scale="0.8"` prop to DraggableContainer
-2. DraggableContainer validates scale range (0.5-2.0), provides to children
-3. User applies CSS `transform: scale()` in parent element (visual presentation)
-4. Vue3DraggableResizable injects scale
-5. hooks.ts resize logic calculates dynamic snap distance: `baseThreshold / scale`
+**数据流**：
+1. 父组件将 `:scale="0.8"` prop 传递给 DraggableContainer
+2. DraggableContainer 验证缩放范围（0.5-2.0），提供给子组件
+3. 用户在父元素中应用 CSS `transform: scale()`（视觉呈现）
+4. Vue3DraggableResizable 注入 scale
+5. hooks.ts 调整大小逻辑计算动态吸附距离：`baseThreshold / scale`
 
-## Component Design
+## 组件设计
 
-### DraggableContainer Modifications
+### DraggableContainer 修改
 
-**New Props**:
+**新增 Props**：
 ```typescript
 scale: {
   type: Number,
@@ -60,16 +60,16 @@ scale: {
 }
 ```
 
-**Provide Logic**:
+**Provide 逻辑**：
 ```typescript
 provide('scale', toRef(props, 'scale'))
 ```
 
-**Note**: DraggableContainer does NOT apply CSS transform. Visual scaling is handled by the user in the parent element.
+**注意**：DraggableContainer 不应用 CSS transform。视觉缩放由用户在父元素中处理。
 
-### Vue3DraggableResizable Modifications
+### Vue3DraggableResizable 修改
 
-**New Props**:
+**新增 Props**：
 ```typescript
 snapToBorder: {
   type: Boolean,
@@ -82,30 +82,30 @@ snapThreshold: {
 }
 ```
 
-**Inject Logic**:
+**Inject 逻辑**：
 ```typescript
 const scale = inject<Ref<number>>('scale', ref(1.0))
 ```
 
-**Pass to Hooks**:
-- Pass `scale`, `snapToBorder`, and `snapThreshold` to `initResizeHandle` function
+**传递给 Hooks**：
+- 将 `scale`、`snapToBorder` 和 `snapThreshold` 传递给 `initResizeHandle` 函数
 
-### hooks.ts Modifications (initResizeHandle)
+### hooks.ts 修改（initResizeHandle）
 
-**Core Logic - Smart Border Snap**:
+**核心逻辑 - 智能边界吸附**：
 
-1. **Calculate Dynamic Snap Threshold**:
+1. **计算动态吸附阈值**：
 ```typescript
 const dynamicThreshold = props.snapThreshold / scale.value
 ```
 
-2. **Detect Boundary Proximity**:
+2. **检测边界接近**：
 ```typescript
 const distanceToRight = parentSize.width - (left + width)
 const distanceToBottom = parentSize.height - (top + height)
 ```
 
-3. **Trigger Snap**:
+3. **触发吸附**：
 ```typescript
 if (snapToBorder && distanceToRight <= dynamicThreshold) {
   width = parentSize.width - left
@@ -115,191 +115,191 @@ if (snapToBorder && distanceToBottom <= dynamicThreshold) {
 }
 ```
 
-4. **Apply to Specific Handles**:
-Snap logic only activates when resizing towards right or bottom directions (handles: `mr`, `br`, `bm`, `tr`, `bl`)
+4. **应用于特定手柄**：
+吸附逻辑只在向右或向下方向调整大小时激活（手柄：`mr`、`br`、`bm`、`tr`、`bl`）
 
-### types.ts Modifications
+### types.ts 修改
 
-**Type Extensions**:
-- Extend `ContainerProvider` interface to include `scale` field if needed
-- Ensure proper TypeScript typing for new props
+**类型扩展**：
+- 扩展 `ContainerProvider` 接口以包含 `scale` 字段（如果需要）
+- 确保为新 props 提供正确的 TypeScript 类型
 
-## Data Flow Examples
+## 数据流示例
 
-### Example 1: User Sets Scale to 0.5
+### 示例 1：用户将缩放设置为 0.5
 
 ```
-1. Parent component passes :scale="0.5" to DraggableContainer
+1. 父组件将 :scale="0.5" 传递给 DraggableContainer
    ↓
-2. DraggableContainer receives and validates scale
+2. DraggableContainer 接收并验证 scale
    ↓
 3. DraggableContainer.provide('scale', ref(0.5))
    ↓
-4. User applies CSS transform: scale(0.5) in parent element (visual)
+4. 用户在父元素中应用 CSS transform: scale(0.5)（视觉）
    ↓
 5. Vue3DraggableResizable.inject('scale') → ref(0.5)
    ↓
-6. hooks.ts initResizeHandle receives scale
+6. hooks.ts initResizeHandle 接收 scale
    ↓
-7. Calculates dynamic snap threshold: 10 / 0.5 = 20px
+7. 计算动态吸附阈值：10 / 0.5 = 20px
    ↓
-8. Component visually shrinks by 50% (via user's CSS), logical coordinates unchanged
+8. 组件视觉上缩小 50%（通过用户的 CSS），逻辑坐标不变
 ```
 
-### Example 2: User Resizes Component Near Boundary
+### 示例 2：用户在边界附近调整组件大小
 
 ```
-Scenario: Container 800x600, Component at (100, 100), current size 100x100,
-user drags bottom-right handle
+场景：容器 800x600，组件位于 (100, 100)，当前大小 100x100，
+用户拖动右下角手柄
 
-1. During drag, component right edge reaches 700px (100px from right boundary)
+1. 拖动过程中，组件右边缘到达 700px（距右边界 100px）
 2. scale = 0.5, dynamicThreshold = 10 / 0.5 = 20px
-3. When distance <= 20px, snap triggers
-4. Component width automatically adjusts to 700px (snaps to right boundary)
-5. User releases mouse, resize-end event fires
+3. 当距离 <= 20px 时，触发吸附
+4. 组件宽度自动调整为 700px（吸附到右边界）
+5. 用户松开鼠标，触发 resize-end 事件
 ```
 
-## Interaction Design
+## 交互设计
 
-### Scaling Behavior
-- Default 0.2s transition animation for smooth UX
-- Configurable via future prop (not in initial implementation)
-- Logical coordinates (x, y, w, h) remain unchanged
-- Only visual representation changes via CSS transform
+### 缩放行为
+- 默认 0.2s 过渡动画以提供流畅的用户体验
+- 可通过未来的 props 配置（不在初始实现中）
+- 逻辑坐标（x, y, w, h）保持不变
+- 仅通过 CSS transform 改变视觉呈现
 
-### Snap Behavior
-- Snap triggers only during resize (not during drag/move)
-- Snap is instant (no transition animation)
-- Only right and bottom boundaries are checked
-- `resizing` and `resize-end` events include post-snap values
+### 吸附行为
+- 吸附仅在调整大小时触发（不在拖拽/移动时）
+- 吸附是瞬间的（无过渡动画）
+- 只检查右边界和下边界
+- `resizing` 和 `resize-end` 事件包含吸附后的值
 
-### Compatibility with Existing Features
-- ✅ Drag functionality: Unaffected (logical coordinates unchanged)
-- ✅ Reference line alignment: Continues to work, snap distance also scale-aware
-- ✅ parent prop: Container restriction still applies
-- ✅ lockAspectRatio: No conflict with snap feature
+### 与现有功能的兼容性
+- ✅ 拖拽功能：不受影响（逻辑坐标不变）
+- ✅ 参考线对齐：继续工作，吸附距离也感知缩放
+- ✅ parent prop：容器限制仍然适用
+- ✅ lockAspectRatio：与吸附功能无冲突
 
-## Edge Cases and Error Handling
+## 边界情况和错误处理
 
-### Input Validation
-- **scale outside [0.5, 2.0]**: Vue validator intercepts, console warning, defaults to 1.0
-- **scale <= 0**: Validator intercepts
-- **snapThreshold <= 0**: Validator intercepts
-- Invalid props are handled by Vue's built-in validation
+### 输入验证
+- **scale 超出 [0.5, 2.0]**：Vue 验证器拦截，控制台警告，默认为 1.0
+- **scale <= 0**：验证器拦截
+- **snapThreshold <= 0**：验证器拦截
+- 无效的 props 由 Vue 的内置验证处理
 
-### Boundary Scenarios
-- **Rapid mouse movement past snap zone**: Continuous mouse events ensure at least one frame will trigger snap
-- **Component initially outside boundary**: `parent` prop handles initialization, snap doesn't handle initial placement
-- **Multiple components scaling**: Each component independently receives scale via inject
+### 边界场景
+- **快速拖动鼠标跳过吸附区域**：连续的鼠标事件确保至少有一帧会触发吸附
+- **组件初始在边界外**：`parent` prop 处理初始化，吸附不处理初始位置
+- **多个组件缩放**：每个组件通过 inject 独立接收 scale
 
-## Testing Strategy
+## 测试策略
 
-### Unit Tests
+### 单元测试
 
-**DraggableContainer**:
-- ✅ scale prop validation (0.5-2.0 range)
-- ✅ scale correctly provided via provide/inject
-- ✅ CSS transform correctly applied to root element
-- ✅ transform-origin set to top left
+**DraggableContainer**：
+- ✅ scale prop 验证（0.5-2.0 范围）
+- ✅ scale 通过 provide/inject 正确提供
+- ✅ CSS transform 正确应用到根元素
+- ✅ transform-origin 设置为 top left
 
-**Vue3DraggableResizable**:
-- ✅ snapToBorder prop correctly passed to hooks
-- ✅ snapThreshold prop validation
-- ✅ scale correctly obtained via inject
+**Vue3DraggableResizable**：
+- ✅ snapToBorder prop 正确传递给 hooks
+- ✅ snapThreshold prop 验证
+- ✅ scale 通过 inject 正确获取
 
-**hooks.ts initResizeHandle**:
-- ✅ Dynamic snap threshold calculation correct
-- ✅ Boundary detection logic correct
-- ✅ Snap only activates when enabled
-- ✅ Only applies to specific handle directions
+**hooks.ts initResizeHandle**：
+- ✅ 动态吸附阈值计算正确
+- ✅ 边界检测逻辑正确
+- ✅ 吸附仅在启用时激活
+- ✅ 仅适用于特定手柄方向
 
-### Integration Tests
+### 集成测试
 
-- ✅ Scale to 50%, drag component still works
-- ✅ Scale to 50%, reference line alignment works
-- ✅ Scale to 50%, resize snap distance correct (20px)
-- ✅ Scale to 200%, resize snap distance correct (5px)
-- ✅ Enable snapToBorder, resize to right boundary triggers snap
-- ✅ Enable snapToBorder, resize to bottom boundary triggers snap
-- ✅ Disable snapToBorder, no snap occurs
-- ✅ Continuous scaling (0.5 → 1.0 → 1.5 → 2.0) without errors
+- ✅ 缩放到 50%，拖拽组件仍正常工作
+- ✅ 缩放到 50%，参考线对齐正常工作
+- ✅ 缩放到 50%，调整大小吸附距离正确（20px）
+- ✅ 缩放到 200%，调整大小吸附距离正确（5px）
+- ✅ 启用 snapToBorder，调整大小到右边界触发吸附
+- ✅ 启用 snapToBorder，调整大小到下边界触发吸附
+- ✅ 禁用 snapToBorder，不发生吸附
+- ✅ 连续缩放（0.5 → 1.0 → 1.5 → 2.0）无错误
 
-### Manual Tests
+### 手动测试
 
-- ✅ Rapid dragging of resize handles
-- ✅ Multiple components with different snap settings
-- ✅ Cross-browser testing (Chrome, Firefox, Safari)
-- ✅ Touch events on mobile devices
+- ✅ 快速拖动调整大小手柄
+- ✅ 多个组件具有不同的吸附设置
+- ✅ 跨浏览器测试（Chrome、Firefox、Safari）
+- ✅ 移动设备上的触摸事件
 
-## Implementation Plan
+## 实现计划
 
-### Phase 1: Canvas Scale Feature (High Priority)
-1. Add scale prop to DraggableContainer
-2. Implement provide logic
-3. Apply CSS transform
-4. Basic testing
+### 阶段 1：画布缩放功能（高优先级）
+1. 在 DraggableContainer 添加 scale prop
+2. 实现 provide 逻辑
+3. 应用 CSS transform
+4. 基础测试
 
-### Phase 2: Smart Border Snap (High Priority)
-1. Add snapToBorder and snapThreshold props to Vue3DraggableResizable
-2. Implement dynamic snap threshold calculation in hooks.ts
-3. Implement boundary detection and snap logic
-4. Integration testing
+### 阶段 2：智能边界吸附（高优先级）
+1. 在 Vue3DraggableResizable 添加 snapToBorder 和 snapThreshold props
+2. 在 hooks.ts 实现动态吸附阈值计算
+3. 实现边界检测和吸附逻辑
+4. 集成测试
 
-### Phase 3: Optimization and Documentation (Medium Priority)
-1. Add unit tests
-2. Update README.md
-3. Add usage examples
-4. Performance optimization if needed
+### 阶段 3：优化和文档（中优先级）
+1. 添加单元测试
+2. 更新 README.md
+3. 添加使用示例
+4. 性能优化（如果需要）
 
-## Backward Compatibility
+## 向后兼容性
 
-All changes are **100% backward compatible**:
-- All new props have default values
-- Default scale=1.0 (no visual change)
-- Default snapToBorder=false (no snap behavior)
-- Existing functionality completely unaffected
+所有更改都是 **100% 向后兼容**：
+- 所有新 props 都有默认值
+- 默认 scale=1.0（无视觉变化）
+- 默认 snapToBorder=false（无吸附行为）
+- 现有功能完全不受影响
 
-## Risk Assessment
+## 风险评估
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Scale affects drag experience | Medium | Logical coordinates unchanged, drag logic unaffected |
-| Snap conflicts with parent prop | Low | Both restrict to container, logic is consistent |
-| Transform affects event coordinates | Low | Use logical coordinates, CSS transform doesn't affect mouse events |
-| Performance issues | Low | GPU acceleration, calculation only during resize |
+| 风险 | 影响 | 缓解措施 |
+|------|--------|----------|
+| 缩放影响拖拽体验 | 中 | 逻辑坐标不变，拖拽逻辑不受影响 |
+| 吸附与 parent prop 冲突 | 低 | 两者都限制在容器内，逻辑一致 |
+| Transform 影响事件坐标 | 低 | 使用逻辑坐标，CSS transform 不影响鼠标事件 |
+| 性能问题 | 低 | GPU 加速，仅在调整大小时计算 |
 
-## Files to Modify
+## 需要修改的文件
 
 1. **src/components/DraggableContainer.ts**
-   - Add scale prop and validation
-   - Implement provide logic
-   - Apply CSS transform styles
+   - 添加 scale prop 和验证
+   - 实现 provide 逻辑
+   - 应用 CSS transform 样式
 
 2. **src/components/Vue3DraggableResizable.ts**
-   - Add snapToBorder and snapThreshold props
-   - Add inject logic for scale
-   - Pass new props to hooks
+   - 添加 snapToBorder 和 snapThreshold props
+   - 为 scale 添加 inject 逻辑
+   - 将新 props 传递给 hooks
 
 3. **src/components/hooks.ts**
-   - Modify initResizeHandle function
-   - Implement dynamic snap threshold calculation
-   - Implement boundary detection and snap logic
+   - 修改 initResizeHandle 函数
+   - 实现动态吸附阈值计算
+   - 实现边界检测和吸附逻辑
 
 4. **src/components/types.ts**
-   - Extend ContainerProvider interface if needed
+   - 扩展 ContainerProvider 接口（如果需要）
 
 5. **README.md**
-   - Document new props
-   - Add usage examples for scale feature
-   - Add usage examples for snap feature
+   - 为新 props 编写文档
+   - 添加缩放功能的使用示例
+   - 添加吸附功能的使用示例
 
-## Usage Examples
+## 使用示例
 
-### Canvas Scaling
+### 画布缩放
 
 ```vue
 <template>
-  <!-- User applies visual scaling in parent element -->
+  <!-- 用户在父元素中应用视觉缩放 -->
   <div :style="{ transform: `scale(${scale})`, transformOrigin: 'top left' }">
     <DraggableContainer :scale="0.8">
       <Vue3DraggableResizable
@@ -308,7 +308,7 @@ All changes are **100% backward compatible**:
         v-model:w="w"
         v-model:h="h"
       >
-        Content
+        内容
       </Vue3DraggableResizable>
     </DraggableContainer>
   </div>
@@ -326,7 +326,7 @@ export default {
 </script>
 ```
 
-### Border Snap
+### 边界吸附
 
 ```vue
 <template>
@@ -339,13 +339,13 @@ export default {
       :snapToBorder="true"
       :snapThreshold="15"
     >
-      Content
+      内容
     </Vue3DraggableResizable>
   </DraggableContainer>
 </template>
 ```
 
-### Combined Usage
+### 组合使用
 
 ```vue
 <template>
@@ -354,7 +354,7 @@ export default {
     <button @click="scale = 1.0">100%</button>
     <button @click="scale = 1.5">150%</button>
 
-    <!-- Visual scaling applied here -->
+    <!-- 视觉缩放在这里应用 -->
     <div :style="{ transform: `scale(${scale})`, transformOrigin: 'top left' }">
       <DraggableContainer :scale="scale">
         <Vue3DraggableResizable
@@ -364,7 +364,7 @@ export default {
           v-model:h="h"
           :snapToBorder="true"
         >
-          Drag me and resize to see snap in action!
+          拖动我并调整大小以查看吸附效果！
         </Vue3DraggableResizable>
       </DraggableContainer>
     </div>
@@ -372,6 +372,6 @@ export default {
 </template>
 ```
 
-## Conclusion
+## 结论
 
-This design provides a clean, maintainable solution for canvas scaling and intelligent border snapping. The centralized architecture aligns with existing patterns in the codebase, and all changes are backward compatible with comprehensive testing coverage.
+本设计为画布缩放和智能边界吸附提供了一个干净、可维护的解决方案。集中式架构与代码库中的现有模式一致，所有更改都是向后兼容的，并具有全面的测试覆盖。
