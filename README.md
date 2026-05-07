@@ -494,6 +494,95 @@ payload: `{ x: number, y: number, w: number, h: number }`
 <Vue3DraggableResizable @resize-end="resizeEndHandle" />
 ```
 
+### Canvas Scale Feature
+
+The canvas scale feature allows you to scale the entire container while maintaining logical coordinates. The visual scaling is applied by you in the parent element.
+
+**Usage:**
+
+```vue
+<template>
+  <!-- 用户在父元素中应用视觉缩放 -->
+  <div :style="{ transform: `scale(${scale})`, transformOrigin: 'top left' }">
+    <DraggableContainer :scale="0.8">
+      <Vue3DraggableResizable
+        v-model:x="x"
+        v-model:y="y"
+        v-model:w="w"
+        v-model:h="h"
+      >
+        内容
+      </Vue3DraggableResizable>
+    </DraggableContainer>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      scale: 0.8,
+      x: 100, y: 100, w: 100, h: 100
+    }
+  }
+}
+</script>
+```
+
+**DraggableContainer Props:**
+
+#### scale
+
+type: `Number`<br>
+default: `1.0`<br>
+range: `0.5 - 2.0`
+
+画布的缩放因子。此值提供给子组件用于吸附距离等计算。您应该使用 CSS transform 自己应用视觉缩放。
+
+### Border Snap Feature
+
+调整大小时自动将组件边缘吸附到容器边界。吸附距离根据缩放因子自动调整。
+
+**Usage:**
+
+```vue
+<template>
+  <DraggableContainer :scale="scale">
+    <Vue3DraggableResizable
+      v-model:x="x"
+      v-model:y="y"
+      v-model:w="w"
+      v-model:h="h"
+      :snapToBorder="true"
+      :snapThreshold="15"
+    >
+      内容
+    </Vue3DraggableResizable>
+  </DraggableContainer>
+</template>
+```
+
+**Vue3DraggableResizable Props:**
+
+#### snapToBorder
+
+type: `Boolean`<br>
+default: `false`
+
+启用调整大小时自动吸附到容器边界。
+
+#### snapThreshold
+
+type: `Number`<br>
+default: `10`<br>
+
+基础吸附距离阈值（像素）。实际阈值计算为 `snapThreshold / scale`，因此吸附在不同缩放级别下正常工作。
+
+示例：
+- scale = 1.0, snapThreshold = 10 → 在 10px 处吸附
+- scale = 0.5, snapThreshold = 10 → 在 20px 处吸附
+- scale = 2.0, snapThreshold = 10 → 在 5px 处吸附
+
 ### Use-adsorption-alignment
 
 You need to import another component to use the "adsorption alignment" feature.
