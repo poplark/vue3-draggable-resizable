@@ -394,7 +394,8 @@ export function initResizeHandle(
   limitProps: ReturnType<typeof initLimitSizeAndMethods>,
   parentSize: ReturnType<typeof initParent>,
   props: any,
-  emit: any
+  emit: any,
+  scale: Ref<number>
 ) {
   const { setWidth, setHeight, setLeft, setTop } = limitProps
   const { width, height, left, top, aspectRatio } = containerProps
@@ -419,6 +420,8 @@ export function initResizeHandle(
   const documentElement = document.documentElement
   const resizeHandleDrag = (e: HandleEvent) => {
     e.preventDefault()
+    // 基于缩放计算动态吸附阈值
+    const dynamicThreshold = props.snapToBorder ? props.snapThreshold / scale.value : 0
     let [_pageX, _pageY] = getPosition(e)
     let deltaX = _pageX - lstPageX
     let deltaY = _pageY - lstPageY
@@ -451,6 +454,23 @@ export function initResizeHandle(
     } else if (idx1 === 'r') {
       setWidth(lstW + deltaX)
     }
+
+    // 应用到右边界吸附
+    if (props.snapToBorder && idx1 === 'r') {
+      const distanceToRight = parentWidth.value - (left.value + width.value)
+      if (distanceToRight <= dynamicThreshold && distanceToRight > 0) {
+        setWidth(parentWidth.value - left.value)
+      }
+    }
+
+    // 应用到下边界吸附
+    if (props.snapToBorder && idx0 === 'b') {
+      const distanceToBottom = parentHeight.value - (top.value + height.value)
+      if (distanceToBottom <= dynamicThreshold && distanceToBottom > 0) {
+        setHeight(parentHeight.value - top.value)
+      }
+    }
+
     emit('resizing', {
       x: left.value,
       y: top.value,
