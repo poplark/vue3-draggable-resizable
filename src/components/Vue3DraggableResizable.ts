@@ -127,6 +127,15 @@ const VdrProps = {
   lockAspectRatio: {
     type: Boolean,
     default: false
+  },
+  snapToBorder: {
+    type: Boolean,
+    default: false
+  },
+  snapThreshold: {
+    type: Number,
+    default: 10,
+    validator: (value: number) => value > 0
   }
 }
 
@@ -152,6 +161,7 @@ const VueDraggableResizable = defineComponent({
   emits: emits,
   setup(props, { emit }) {
     const containerProps = initState(props, emit)
+    const scale = inject<Ref<number>>('scale', ref(1.0))
     const provideIdentity = inject('identity', Symbol())
     let containerProvider: ContainerProvider | null = null
     if (provideIdentity === IDENTITY) {
@@ -186,7 +196,8 @@ const VueDraggableResizable = defineComponent({
       limitProps,
       parentSize,
       props,
-      emit
+      emit,
+      scale
     )
     watchProps(props, limitProps)
     return {
